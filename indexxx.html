@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prayer Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f9f9f9;
+    }
+    header {
+      background-color: #d79000;
+      color: white;
+      text-align: center;
+      padding: 10px;
+      font-size: 24px;
+    }
+    .container {
+      padding: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    table, th, td {
+      border: 1px solid #ddd;
+    }
+    th, td {
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background-color: #d79000;
+      color: white;
+    }
+    .actions button {
+      font-size: 18px;
+      cursor: pointer;
+      border: 1px solid white;
+      border-radius: 10px;
+      padding: 5px 10px;
+      background-color: transparent;
+      color: #d79000;
+    }
+    .actions button:hover {
+      opacity: 0.9;
+      text-decoration: none;
+    }
+    .footer {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background-color: #d79000;
+      display: flex;
+      justify-content: space-around;
+      padding: 10px 0;
+    }
+    .footer button {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .footer button:hover {
+      text-decoration: underline;
+    }
+    #report {
+      display: none;
+    }
+    .download-button {
+      margin-top: 20px;
+      padding: 10px 15px;
+      background-color: #f0a500;
+      color: white;
+      border: 1px solid white;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .download-button:hover {
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+
+<header>Prayer Tracker - A Mibaqo Product</header>
+
+<div class="container" id="attendance">
+  <table>
+    <thead>
+      <tr>
+        <th>Prayer</th>
+        <th>Status</th>
+        <th>Date and Time</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr id="fajr">
+        <td>Fajr</td>
+        <td class="actions" id="fajr-actions">
+          <button onclick="markPrayer('fajr', true)">✔️</button>
+          <button onclick="markPrayer('fajr', false)">❌</button>
+        </td>
+        <td id="fajr-time"></td>
+      </tr>
+      <tr id="dhuhr">
+        <td id="dhuhr-label">Dhuhr</td>
+        <td class="actions" id="dhuhr-actions">
+          <button onclick="markPrayer('dhuhr', true)">✔️</button>
+          <button onclick="markPrayer('dhuhr', false)">❌</button>
+        </td>
+        <td id="dhuhr-time"></td>
+      </tr>
+      <tr id="asr">
+        <td>Asr</td>
+        <td class="actions" id="asr-actions">
+          <button onclick="markPrayer('asr', true)">✔️</button>
+          <button onclick="markPrayer('asr', false)">❌</button>
+        </td>
+        <td id="asr-time"></td>
+      </tr>
+      <tr id="maghrib">
+        <td>Maghrib</td>
+        <td class="actions" id="maghrib-actions">
+          <button onclick="markPrayer('maghrib', true)">✔️</button>
+          <button onclick="markPrayer('maghrib', false)">❌</button>
+        </td>
+        <td id="maghrib-time"></td>
+      </tr>
+      <tr id="isha">
+        <td>Isha</td>
+        <td class="actions" id="isha-actions">
+          <button onclick="markPrayer('isha', true)">✔️</button>
+          <button onclick="markPrayer('isha', false)">❌</button>
+        </td>
+        <td id="isha-time"></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="container" id="report">
+  <h2>Daily Report</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Prayer</th>
+        <th>Status</th>
+        <th>Date and Time</th>
+      </tr>
+    </thead>
+    <tbody id="daily-report">
+    </tbody>
+  </table>
+  <button class="download-button" onclick="downloadReport()">Download Your Daily Report</button>
+</div>
+
+<div class="footer">
+  <button onclick="showPage('attendance')">Attendance</button>
+  <button onclick="showPage('report')">Report</button>
+</div>
+
+<script>
+  const prayers = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
+  const prayerData = {};
+  const currentDate = new Date().toISOString().split('T')[0];
+
+  // Load saved data from localStorage
+  function loadSavedData() {
+    const savedData = JSON.parse(localStorage.getItem('prayerTracker')) || {};
+
+    if (savedData.date === currentDate) {
+      Object.assign(prayerData, savedData.data);
+      Object.keys(prayerData).forEach(prayer => {
+        const { status, time } = prayerData[prayer];
+        const actionsCell = document.getElementById(`${prayer}-actions`);
+        const prayerTimeElement = document.getElementById(`${prayer}-time`);
+
+        if (status) {
+          actionsCell.innerHTML = status === 'Prayed'
+            ? `<button onclick="editPrayer('${prayer}')">✏️</button>✔️`
+            : `<button onclick="editPrayer('${prayer}')">✏️</button>❌`;
+          prayerTimeElement.innerHTML = time;
+        }
+      });
+    } else {
+      prayers.forEach(prayer => {
+        prayerData[prayer] = { status: '', time: '' };
+      });
+    }
+  }
+
+  // Save data to localStorage
+  function saveData() {
+    localStorage.setItem('prayerTracker', JSON.stringify({
+      date: currentDate,
+      data: prayerData
+    }));
+  }
+
+  function markPrayer(prayer, isChecked) {
+    const now = new Date();
+    const dateTime = `${currentDate}<br>${now.toTimeString().split(' ')[0]}`;
+    prayerData[prayer] = { status: isChecked ? 'Prayed' : 'Missed', time: dateTime };
+
+    const actionsCell = document.getElementById(`${prayer}-actions`);
+    actionsCell.innerHTML = isChecked
+      ? `<button onclick="editPrayer('${prayer}')">✏️</button>✔️`
+      : `<button onclick="editPrayer('${prayer}')">✏️</button>❌`;
+
+    const prayerTimeElement = document.getElementById(`${prayer}-time`);
+    prayerTimeElement.innerHTML = dateTime;
+
+    saveData();
+  }
+
+  function editPrayer(prayer) {
+    const actionsCell = document.getElementById(`${prayer}-actions`);
+    actionsCell.innerHTML = `
+      <button onclick="markPrayer('${prayer}', true)">✔️</button>
+      <button onclick="markPrayer('${prayer}', false)">❌</button>
+    `;
+
+    const prayerTimeElement = document.getElementById(`${prayer}-time`);
+    prayerTimeElement.innerHTML = '';
+    prayerData[prayer] = { status: '', time: '' };
+
+    saveData();
+  }
+
+  function showPage(pageId) {
+    document.querySelectorAll('.container').forEach(page => {
+      page.style.display = 'none';
+    });
+    document.getElementById(pageId).style.display = 'block';
+
+    if (pageId === 'report') {
+      generateReport();
+    }
+  }
+
+  function generateReport() {
+    const reportTable = document.getElementById('daily-report');
+    reportTable.innerHTML = '';
+    prayers.forEach(prayer => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${prayer.charAt(0).toUpperCase() + prayer.slice(1)}</td>
+        <td>${prayerData[prayer].status === 'Prayed' ? '✔️' : '❌'}</td>
+        <td>${prayerData[prayer].time || 'N/A'}</td>
+      `;
+      reportTable.appendChild(row);
+    });
+  }
+
+  function downloadReport() {
+    const reportElement = document.getElementById('report');
+    html2canvas(reportElement).then(canvas => {
+      const link = document.createElement('a');
+      link.download = 'daily_report.jpg';
+      link.href = canvas.toDataURL();
+      link.click();
+    });
+  }
+
+  // Initialize the application
+  loadSavedData();
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</body>
+</html>
